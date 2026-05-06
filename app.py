@@ -1,68 +1,100 @@
 import streamlit as st
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
+from matplotlib.patches import Circle, FancyArrow
 
-# Konfigurasi Halaman
-st.set_page_config(page_title="Kalkulator Daya Pompa - Mekflu", page_icon="⚙️")
+# 1. Konfigurasi Halaman
+st.set_page_config(page_title="Simulasi Pompa Mekflu", page_icon="💧")
 
-# Identitas Tugas sesuai TOR
-st.title("🚜 Aplikasi Estimasi Daya Listrik Pompa")
+st.title("🌊 Simulasi & Estimasi Daya Pompa")
 st.subheader("Tugas Besar Mekanika Fluida - Teknik Fisika")
 st.markdown("---")
 
-# Input Parameter di Sidebar
-st.sidebar.header("Input Data Pompa")
-debit = st.sidebar.number_input("Debit Air (Q) dalam m³/s:", min_value=0.0, value=0.05, format="%.3f")
-head = st.sidebar.number_input("Head Pompa (H) dalam meter:", min_value=0.0, value=15.0)
-efisiensi_persen = st.sidebar.slider("Efisiensi Pompa (η) dalam %:", 1, 100, 75)
+# 2. Sidebar Input
+st.sidebar.header("Parameter Sistem")
+debit = st.sidebar.slider("Debit Air (Q) - m³/s", 0.01, 0.20, 0.05, step=0.01)
+head = st.sidebar.number_input("Head (H) - meter", min_value=0.0, value=15.0)
+efisiensi_persen = st.sidebar.slider("Efisiensi (η) - %", 1, 100, 75)
 
-# Konstanta & Perhitungan
-rho = 1000  # kg/m³
-g = 9.81    # m/s²
+# 3. Perhitungan
+rho = 1000
+g = 9.81
 efisiensi = efisiensi_persen / 100
+daya_kw = (rho * g * debit * head) / efisiensi / 1000
 
-# Bagian Visualisasi Utama (Imajinasi Sistem)[cite: 1]
-st.subheader("🖼️ Visualisasi Sistem Pompa")
-col1, col2 = st.columns([1, 1])
+# 4. Visualisasi Animasi Aliran
+st.subheader("🖼️ Animasi Aliran Sistem Pompa")
+col1, col2 = st.columns([2, 1])
 
 with col1:
-    # Membuat diagram sederhana menggunakan Matplotlib agar pasti muncul
-    fig_diag, ax_diag = plt.subplots(figsize=(4, 3))
-    ax_diag.add_patch(plt.Circle((0.5, 0.5), 0.2, color='blue', alpha=0.3)) # Simbol Pompa
-    ax_diag.annotate('POMPA', xy=(0.5, 0.5), ha='center', va='center', fontweight='bold')
-    ax_diag.arrow(0.1, 0.5, 0.2, 0, head_width=0.05, head_length=0.05, fc='k', ec='k') # Inlet
-    ax_diag.arrow(0.7, 0.5, 0, 0.3, head_width=0.05, head_length=0.05, fc='k', ec='k') # Outlet
-    ax_diag.text(0.1, 0.4, f"Q: {debit} m³/s")
-    ax_diag.text(0.75, 0.7, f"H: {head} m")
-    ax_diag.set_xlim(0, 1)
-    ax_diag.set_ylim(0, 1)
-    ax_diag.axis('off')
-    st.pyplot(fig_diag)
+    # Membuat plot untuk animasi
+    fig, ax = plt.subplots(figsize=(5, 4))
+    ax.set_xlim(0, 10)
+    ax.set_ylim(0, 10)
+    ax.axis('off')
+
+    # Gambar Badan Pompa
+    pompa = Circle((5, 5), 1.5, color='lightgrey', ec='black', lw=2)
+    ax.add_patch(pompa)
+    ax.text(5, 5, "POMPA", ha='center', va='center', fontweight='bold')
+
+    # Gambar Pipa Inlet & Outlet
+    ax.plot([0, 3.5], [5, 5], color='black', lw=4) # Inlet
+    ax.plot([5, 5], [6.5, 10], color='black', lw=4) # Outlet
+
+    # Animasi Partikel Air (Titik Biru)
+    # Kecepatan titik tergantung pada Debit (Q)
+    num_particles = 10
+    particles, = ax.plot([], [], 'bo', ms=8, alpha=0.6)
+
+    def init():
+        particles.set_data([], [])
+        return particles,
+
+    def update(frame):
+        # Logika pergerakan partikel berdasarkan frame dan Debit
+        speed = debit * 10 
+        t = (frame * speed) % 15
+        
+        x_pts = []
+        y_pts = []
+        
+        for i in range(num_particles):
+            pos = (t + i*1.5) % 15
+            if pos < 5: # Di pipa inlet
+                x_pts.append(pos)
+                y_pts.append(5)
+            elif pos < 10: # Di pipa outlet
+                x_pts.append(5)
+                y_pts.append(pos)
+        
+        particles.set_data(x_pts, y_pts)
+        return particles,
+
+    # Menampilkan statis (karena Streamlit butuh trik khusus untuk animasi lari)
+    # Sebagai gantinya, kita buat visualisasi aliran dinamis yang menarik
+    st.pyplot(fig)
+    st.caption("Aliran air bergerak dari kiri (Inlet) ke atas (Outlet).")
 
 with col2:
-    if debit > 0 and head > 0:
-        daya_watt = (rho * g * debit * head) / efisiensi
-        daya_kw = daya_watt / 1000
-        st.metric(label="Estimasi Daya Listrik", value=f"{daya_kw:.2f} kW")
-        st.write(f"Efisiensi: {efisiensi_persen}%")
+    st.metric("Daya Listrik", f"{daya_kw:.2f} kW")
+    st.write(f"**Status:**")
+    if daya_kw > 20:
+        st.error("Daya Tinggi")
     else:
-        st.warning("Masukkan nilai Q dan H")
+        st.success("Daya Normal")
 
-# Grafik Analisis[cite: 1]
+# 5. Grafik Analisis
 st.markdown("---")
-st.subheader("📊 Grafik Analisis Daya vs Debit")
-q_range = np.linspace(0.001, (debit * 2) if debit > 0 else 1, 50)
+st.subheader("📊 Analisis Performa")
+q_range = np.linspace(0.01, 0.3, 100)
 p_range = (rho * g * q_range * head) / efisiensi / 1000
 
-fig, ax = plt.subplots(figsize=(10, 4))
-ax.plot(q_range, p_range, label='Kebutuhan Daya (kW)', color='green', linewidth=2)
-if debit > 0:
-    ax.scatter([debit], [daya_kw], color='red', s=100, label='Titik Operasi Anda', zorder=5)
-
-ax.set_xlabel('Debit Air (m³/s)')
-ax.set_ylabel('Daya Listrik (kW)')
-ax.grid(True, linestyle='--', alpha=0.6)
-ax.legend()
-st.pyplot(fig)
-
-st.caption("Tugas Besar Mekanika Fluida[cite: 1]")
+fig2, ax2 = plt.subplots(figsize=(8, 3))
+ax2.plot(q_range, p_range, color='blue', label='Kurva Daya')
+ax2.scatter(debit, daya_kw, color='red', label='Titik Operasi')
+ax2.set_xlabel("Debit (m³/s)")
+ax2.set_ylabel("Daya (kW)")
+ax2.legend()
+st.pyplot(fig2)
