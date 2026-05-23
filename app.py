@@ -4,24 +4,24 @@ import matplotlib.pyplot as plt
 import time
 
 # =========================
-# CONFIG HALAMAN
+# CONFIG
 # =========================
-st.set_page_config(page_title="Simulasi Pompa", layout="wide")
+st.set_page_config(page_title="Simulasi Pompa Air", layout="wide")
 
-st.title("💧 Simulasi Daya Pompa Air")
-st.write("Masukkan parameter untuk melihat estimasi daya dan animasi aliran air")
+st.title("💧 Simulasi Daya Pompa Air Interaktif")
+st.write("Visualisasi aliran fluida berdasarkan parameter input")
 
 # =========================
-# SESSION STATE (PENTING)
+# SESSION STATE
 # =========================
 if "run" not in st.session_state:
     st.session_state.run = False
 
 # =========================
-# INPUT USER
+# INPUT
 # =========================
 with st.sidebar:
-    st.header("⚙️ Input")
+    st.header("⚙️ Input Parameter")
 
     debit = st.slider("Debit (m³/s)", 0.01, 0.2, 0.05)
     head = st.number_input("Head (m)", 1.0, 50.0, 10.0)
@@ -40,7 +40,7 @@ rho = 1000
 g = 9.81
 eta = efisiensi / 100
 
-daya = (rho * g * debit * head) / eta / 1000  # kW
+daya = (rho * g * debit * head) / eta / 1000
 
 # =========================
 # LAYOUT
@@ -48,15 +48,14 @@ daya = (rho * g * debit * head) / eta / 1000  # kW
 col1, col2 = st.columns([2, 1])
 
 # =========================
-# VISUALISASI
+# ANIMASI
 # =========================
 with col1:
-    st.subheader("🔄 Animasi Pompa")
+    st.subheader("🔄 Visualisasi Aliran Fluida")
 
     placeholder = st.empty()
 
     if st.session_state.run:
-
         for i in range(100):
 
             fig, ax = plt.subplots(figsize=(6, 4))
@@ -64,29 +63,52 @@ with col1:
             ax.set_ylim(0, 10)
             ax.axis('off')
 
-            # POMPA
+            # ======================
+            # POMPA (LINGKARAN)
+            # ======================
             pump = plt.Circle((5, 5), 1.2, color='teal')
             ax.add_patch(pump)
-            ax.text(5, 5, "POMPA", ha='center', va='center', color='white')
 
+            # ======================
+            # IMPELLER (BERPUTAR)
+            # ======================
+            angle = i * 20
+            for k in range(4):
+                x = 5 + 0.9 * np.cos(np.radians(angle + k * 90))
+                y = 5 + 0.9 * np.sin(np.radians(angle + k * 90))
+                ax.plot([5, x], [5, y], linewidth=2, color='white')
+
+            # ======================
             # PIPA
-            ax.plot([0, 4], [5, 5], linewidth=5)   # inlet
-            ax.plot([5, 5], [6.2, 10], linewidth=5)  # outlet
+            # ======================
+            ax.plot([0, 4], [5, 5], linewidth=6)      # inlet
+            ax.plot([5, 5], [6.2, 10], linewidth=6)   # outlet
 
-            # KECEPATAN AIR (dipengaruhi debit)
-            speed = debit * 30
+            # ======================
+            # KECEPATAN AIR
+            # ======================
+            speed_in = debit * 20
+            speed_out = debit * 35  # lebih cepat karena head
 
-            # PARTIKEL AIR
-            for j in range(6):
-                t = (i * speed + j * 2) % 10
+            # ======================
+            # ALIRAN MASUK
+            # ======================
+            for j in range(15):
+                t = (i * speed_in + j) % 4
+                ax.plot([t, t + 0.3], [5, 5], linewidth=2, color='blue')
 
-                # masuk
-                if t < 4:
-                    ax.plot(t, 5, 'bo')
+            # ======================
+            # ALIRAN KELUAR
+            # ======================
+            for j in range(15):
+                t = (i * speed_out + j) % 4
+                ax.plot([5, 5], [6 + t, 6.3 + t], linewidth=2, color='blue')
 
-                # keluar
-                if t >= 4:
-                    ax.plot(5, 6 + (t - 4), 'bo')
+            # ======================
+            # PANAH ARAH
+            # ======================
+            ax.arrow(2, 5, 1, 0, head_width=0.3)
+            ax.arrow(5, 7, 0, 1, head_width=0.3)
 
             placeholder.pyplot(fig)
             plt.close(fig)
@@ -102,11 +124,11 @@ with col2:
     st.metric("Daya Pompa", f"{daya:.2f} kW")
 
     if daya > 20:
-        st.error("⚠️ Daya besar")
+        st.error("⚠️ Daya tinggi")
     else:
         st.success("✅ Daya normal")
 
-    st.write("### Input:")
+    st.write("### Detail:")
     st.write(f"Debit = {debit} m³/s")
     st.write(f"Head = {head} m")
     st.write(f"Efisiensi = {efisiensi}%")
