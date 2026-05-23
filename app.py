@@ -129,7 +129,13 @@ with col_display:
         
         for(let i=0; i<25; i++) {{
             inletParticles.push({{ x: Math.random() * 240, y: 185 + (Math.random() * 26), r: Math.random() * 2.5 + 1.5 }});
-            outletParticles.push({{ x: 295 + (Math.random() * 26), y: Math.random() * 130, r: Math.random() * 2.5 + 1.5 }}} );
+            
+            // PERBAIKAN DI SINI: Memisahkan penutup object kurung kurawal agar f-string Python tidak error
+            outletParticles.push({{ 
+                x: 295 + (Math.random() * 26), 
+                y: Math.random() * 130, 
+                r: Math.random() * 2.5 + 1.5 
+            }});
         }}
 
         function drawPump() {{
@@ -256,10 +262,7 @@ ax.axvline(debit, color='gray', linestyle=':', alpha=0.7)
 
 ax.set_xlabel("Debit Fluida Q (m³/s)", fontsize=9)
 ax.set_ylabel("Daya Mekanis P (kW)", fontsize=9)
-
-# PERBAIKAN: Menggunakan ax.set_title (huruf kecil) agar tidak AttributeError
 ax.set_title(f"Analisis Dinamis pada Konstanta Head {head} meter", fontsize=10, fontweight='bold', color='#333333')
-
 ax.grid(True, linestyle='--', alpha=0.4)
 ax.legend(loc='upper left', fontsize=9)
 
