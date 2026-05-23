@@ -19,13 +19,6 @@ st.markdown("""
         font-weight: 700;
         color: #1f4e79;
     }
-    .status-card {
-        padding: 15px; 
-        border-radius: 10px; 
-        margin-bottom: 15px;
-        font-weight: bold;
-        text-align: center;
-    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -49,7 +42,6 @@ col_control, col_display = st.columns([1.1, 1.9])
 with col_control:
     st.subheader("⚙️ Parameter Sistem")
     
-    # Menggunakan number_input agar user bisa mengetik langsung secara presisi
     debit = st.number_input(
         "Debit Aliran (Q) dalam m³/s", 
         min_value=0.001, 
@@ -111,7 +103,6 @@ with col_display:
             st.session_state.run = False
             
     is_running = "true" if st.session_state.run else "false"
-    # Mengatur batas kecepatan animasi agar tetap proporsional dan tidak terlalu ekstrem
     base_speed = np.clip(debit * 100, 1, 25)
 
     # HTML5 Canvas Animation Code
@@ -136,10 +127,9 @@ with col_display:
         let inletParticles = [];
         let outletParticles = [];
         
-        // Regenerasi posisi gelembung air secara acak di dalam pipa
         for(let i=0; i<25; i++) {{
-            inletParticles.push({{ x: Math.random() * 240, y: 200 + (Math.random() * 26 - 13), r: Math.random() * 2.5 + 1.5 }});
-            outletParticles.push({{ x: 310 + (Math.random() * 26 - 13), y: Math.random() * 130, r: Math.random() * 2.5 + 1.5 }}} );
+            inletParticles.push({{ x: Math.random() * 240, y: 185 + (Math.random() * 26), r: Math.random() * 2.5 + 1.5 }});
+            outletParticles.push({{ x: 295 + (Math.random() * 26), y: Math.random() * 130, r: Math.random() * 2.5 + 1.5 }}} );
         }}
 
         function drawPump() {{
@@ -193,7 +183,6 @@ with col_display:
             ctx.strokeStyle = "#7f8c8d";
             ctx.lineWidth = 4;
             
-            // Menggambar sirip baling-baling melengkung
             for (let i = 0; i < 6; i++) {{
                 ctx.rotate((Math.PI * 2) / 6);
                 ctx.beginPath();
@@ -267,7 +256,10 @@ ax.axvline(debit, color='gray', linestyle=':', alpha=0.7)
 
 ax.set_xlabel("Debit Fluida Q (m³/s)", fontsize=9)
 ax.set_ylabel("Daya Mekanis P (kW)", fontsize=9)
+
+# PERBAIKAN: Menggunakan ax.set_title (huruf kecil) agar tidak AttributeError
 ax.set_title(f"Analisis Dinamis pada Konstanta Head {head} meter", fontsize=10, fontweight='bold', color='#333333')
+
 ax.grid(True, linestyle='--', alpha=0.4)
 ax.legend(loc='upper left', fontsize=9)
 
