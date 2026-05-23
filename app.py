@@ -3,19 +3,34 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 # =========================
-# CONFIG
+# CONFIG & THEME
 # =========================
 st.set_page_config(page_title="Simulasi Pompa Air Pro", layout="wide")
 
+# Custom CSS untuk mempercantik card dan input box
 st.markdown("""
     <style>
-    .reportview-container { background: #f0f2f6; }
-    .stMetric { background-color: #ffffff; padding: 15px; border-radius: 10px; border: 1px solid #e0e0e0; }
+    .block-container { padding-top: 2rem; }
+    .stNumberInput div[data-baseweb="input"] {
+        border-radius: 8px;
+    }
+    div[data-testid="stMetricValue"] {
+        font-size: 2.2rem;
+        font-weight: 700;
+        color: #1f4e79;
+    }
+    .status-card {
+        padding: 15px; 
+        border-radius: 10px; 
+        margin-bottom: 15px;
+        font-weight: bold;
+        text-align: center;
+    }
     </style>
 """, unsafe_allow_html=True)
 
 st.title("💧 Simulasi Daya Pompa Air Interaktif")
-st.write("Visualisasi aliran fluida berdasarkan parameter input")
+st.write("Visualisasi aliran fluida dinamis dengan input presisi")
 
 # =========================
 # SESSION STATE
@@ -24,56 +39,90 @@ if "run" not in st.session_state:
     st.session_state.run = False
 
 # =========================
-# INPUT (SIDEBAR)
+# LAYOUT UTAMA (2 KOLOM BALANS)
 # =========================
-with st.sidebar:
-    st.header("⚙️ Input Parameter")
+col_control, col_display = st.columns([1.1, 1.9])
 
-    debit = st.slider("Debit (m³/s)", 0.01, 0.20, 0.05, step=0.01)
-    head = st.number_input("Head (m)", 1.0, 50.0, 10.0, step=1.0)
-    efisiensi = st.slider("Efisiensi (%)", 10, 100, 75)
+# =========================
+# KOLOM KIRI: INPUT PARAMETER (DIKETIK)
+# =========================
+with col_control:
+    st.subheader("⚙️ Parameter Sistem")
+    
+    # Menggunakan number_input agar user bisa mengetik langsung secara presisi
+    debit = st.number_input(
+        "Debit Aliran (Q) dalam m³/s", 
+        min_value=0.001, 
+        max_value=1.000, 
+        value=0.050, 
+        step=0.005,
+        format="%.3f",
+        help="Ketik nilai debit air. Contoh: 0.050"
+    )
+    
+    head = st.number_input(
+        "Total Head Pompa (H) dalam meter", 
+        min_value=0.1, 
+        max_value=100.0, 
+        value=10.0, 
+        step=0.5,
+        format="%.1f",
+        help="Ketik tinggi dorong pompa dalam satuan meter."
+    )
+    
+    efisiensi = st.number_input(
+        "Efisiensi Pompa (η) dalam %", 
+        min_value=5, 
+        max_value=100, 
+        value=75, 
+        step=1,
+        help="Ketik efisiensi mekanis pompa (5% - 100%)."
+    )
+    
+    st.markdown("---")
+    st.subheader("⚡ Hasil Analisis")
+    
+    # Perhitungan Mekanika Fluida & Daya
+    rho = 1000  # kg/m³
+    g = 9.81    # m/s²
+    eta = efisiensi / 100
+    daya = (rho * g * debit * head) / eta / 1000  # Rumus Daya Hidrolis (kW)
+    
+    st.metric(label="Kebutuhan Daya Aktual", value=f"{daya:.2f} kW")
+    
+    if daya > 20:
+        st.error("⚠️ Overload: Daya terlalu tinggi untuk sistem standar!")
+    else:
+        st.success("✅ Aman: Kapasitas daya dalam batas normal.")
 
-    col_btn1, col_btn2 = st.columns(2)
-    with col_btn1:
+# =========================
+# KOLOM KANAN: ANIMASI CANVAS & GRAFIK
+# =========================
+with col_display:
+    st.subheader("🔄 Visualisasi Aliran & Konstruksi Pompa")
+    
+    # Pengkondisian tombol kontrol di atas canvas
+    c1, c2, c3 = st.columns([1, 1, 2])
+    with c1:
         if st.button("▶️ Jalankan", use_container_width=True):
             st.session_state.run = True
-    with col_btn2:
+    with c2:
         if st.button("⏹️ Stop", use_container_width=True):
             st.session_state.run = False
-
-# =========================
-# PERHITUNGAN
-# =========================
-rho = 1000
-g = 9.81
-eta = efisiensi / 100
-daya = (rho * g * debit * head) / eta / 1000
-
-# =========================
-# LAYOUT UTAMA
-# =========================
-col1, col2 = st.columns([1.8, 1.2])
-
-# =========================
-# COL 1: ANIMASI REALISTIS (HTML5 CANVAS)
-# =========================
-with col1:
-    st.subheader("🔄 Visualisasi Aliran Fluida")
-    
-    # Menentukan status dan kecepatan animasi berdasarkan state
+            
     is_running = "true" if st.session_state.run else "false"
-    # Kecepatan partikel proporsional terhadap debit
-    base_speed = debit * 80 
+    # Mengatur batas kecepatan animasi agar tetap proporsional dan tidak terlalu ekstrem
+    base_speed = np.clip(debit * 100, 1, 25)
 
-    # Inject HTML & JavaScript Canvas untuk animasi pompa & partikel air yang halus
+    # HTML5 Canvas Animation Code
     canvas_html = f"""
-    <div style="background: white; padding: 15px; border-radius: 12px; border: 1px solid #e0e0e0; text-align: center;">
-        <div style="text-align: left; margin-bottom: 10px; font-weight: bold; color: #333;">
-            Status: <span style="color: {'#2ecc71' if st.session_state.run else '#e74c3c'};">
-                {'● BERJALAN' if st.session_state.run else '● BERHENTI'}
+    <div style="background: white; padding: 10px; border-radius: 12px; border: 1px solid #e0e0e0; text-align: center;">
+        <div style="text-align: left; margin-bottom: 8px; font-weight: bold; font-family: sans-serif; font-size: 14px; color: #555;">
+            Kondisi Pompa: <span style="color: {'#2ecc71' if st.session_state.run else '#e74c3c'};">
+                {'● AKTIF (MENGALIR)' if st.session_state.run else '● NON-AKTIF'}
             </span>
         </div>
-        <canvas id="pumpCanvas" width="600" height="400" style="background:#f9fbfd; border-radius: 8px;"></canvas>
+        <canvas id="pumpCanvas" width="650" height="350" style="background:#f4f7f9; border-radius: 8px;"></canvas>
     </div>
 
     <script>
@@ -84,193 +133,142 @@ with col1:
         const speed = {base_speed};
         let angle = 0;
 
-        // Inisialisasi partikel air (posisi x, posisi y, ukuran, kecepatan individual)
         let inletParticles = [];
         let outletParticles = [];
         
-        for(let i=0; i<30; i++) {{
-            inletParticles.push({{ x: Math.random() * 230, y: 230 + (Math.random() * 30 - 15), r: Math.random() * 3 + 2 }});
-            outletParticles.push({{ x: 300 + (Math.random() * 30 - 15), y: 170 - (Math.random() * 170), r: Math.random() * 3 + 2 }});
+        // Regenerasi posisi gelembung air secara acak di dalam pipa
+        for(let i=0; i<25; i++) {{
+            inletParticles.push({{ x: Math.random() * 240, y: 200 + (Math.random() * 26 - 13), r: Math.random() * 2.5 + 1.5 }});
+            outletParticles.push({{ x: 310 + (Math.random() * 26 - 13), y: Math.random() * 130, r: Math.random() * 2.5 + 1.5 }}} );
         }}
 
-        function drawPumpStructure() {{
-            // 1. Gambar Pipa Horizontal (Inlet Transparan)
-            ctx.fillStyle = "rgba(41, 128, 185, 0.15)";
-            ctx.fillRect(0, 210, 240, 40);
-            ctx.strokeStyle = "#7f8c8d";
-            ctx.lineWidth = 3;
+        function drawPump() {{
+            // Pipa Suction (Inlet)
+            ctx.fillStyle = "rgba(52, 152, 219, 0.12)";
+            ctx.fillRect(0, 185, 250, 30);
+            ctx.strokeStyle = "#95a5a6";
+            ctx.lineWidth = 2.5;
             ctx.beginPath();
-            ctx.moveTo(0, 210); ctx.lineTo(240, 210);
-            ctx.moveTo(0, 250); ctx.lineTo(230, 250);
+            ctx.moveTo(0, 185); ctx.lineTo(250, 185);
+            ctx.moveTo(0, 215); ctx.lineTo(238, 215);
             ctx.stroke();
 
-            // 2. Gambar Pipa Vertikal (Outlet Transparan)
-            ctx.fillStyle = "rgba(41, 128, 185, 0.15)";
-            ctx.fillRect(285, 0, 40, 160);
+            // Pipa Discharge (Outlet)
+            ctx.fillStyle = "rgba(52, 152, 219, 0.12)";
+            ctx.fillRect(295, 0, 30, 130);
             ctx.beginPath();
-            ctx.moveTo(285, 0); ctx.lineTo(285, 160);
-            ctx.moveTo(325, 0); ctx.lineTo(325, 135);
+            ctx.moveTo(295, 0); ctx.lineTo(295, 130);
+            ctx.moveTo(325, 0); ctx.lineTo(325, 110);
             ctx.stroke();
-            
-            // Flensa Sambungan Pipa
-            ctx.fillStyle = "#bdc3c7";
-            ctx.fillRect(225, 205, 15, 50);
-            ctx.fillRect(280, 145, 50, 15);
 
-            // 3. Badan Pompa Snail Shell (Volute Casing) - Biru Metalik
-            ctx.save();
-            ctx.shadowBlur = 10;
-            ctx.shadowColor = "rgba(0,0,0,0.2)";
-            ctx.fillStyle = "#1f4e79"; 
-            ctx.beginPath();
-            ctx.arc(300, 230, 65, 0, Math.PI * 2);
-            ctx.fill();
-            ctx.lineWidth = 4;
-            ctx.strokeStyle = "#153654";
-            ctx.stroke();
-            
-            // Motor Listrik di Belakang Pompa
+            // Casing Blok Motor (Heatsink)
             ctx.fillStyle = "#2c3e50";
-            ctx.fillRect(360, 190, 90, 80);
-            // Sirip-sirip heatsink motor
+            ctx.fillRect(360, 160, 100, 80);
             ctx.fillStyle = "#34495e";
-            for(let m=0; m<5; m++) {{
-                ctx.fillRect(370 + (m*15), 180, 8, 10);
-                ctx.fillRect(370 + (m*15), 270, 8, 10);
+            for(let m=0; m<6; m++) {{
+                ctx.fillRect(370 + (m*14), 152, 7, 8);
+                ctx.fillRect(370 + (m*14), 240, 7, 8);
             }}
-            ctx.restore();
 
-            // 4. Pusat Impeller
-            ctx.fillStyle = "#ecf0f1";
+            // Rumah Siput Pompa (Volute Casing)
+            ctx.fillStyle = "#1a446c";
             ctx.beginPath();
-            ctx.arc(300, 230, 45, 0, Math.PI * 2);
+            ctx.arc(310, 200, 60, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.strokeStyle = "#112d47";
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Ruang Impeller Internal
+            ctx.fillStyle = "#ffffff";
+            ctx.beginPath();
+            ctx.arc(310, 200, 40, 0, Math.PI * 2);
             ctx.fill();
         }}
 
-        function drawImpellerBlades(currentAngle) {{
+        function drawImpeller(rotAngle) {{
             ctx.save();
-            ctx.translate(300, 230);
-            ctx.rotate(currentAngle);
+            ctx.translate(310, 200);
+            ctx.rotate(rotAngle);
             ctx.strokeStyle = "#7f8c8d";
-            ctx.lineWidth = 5;
-            ctx.lineCap = "round";
+            ctx.lineWidth = 4;
             
-            // Menggambar bilah melengkung (Impeller Vanes)
+            // Menggambar sirip baling-baling melengkung
             for (let i = 0; i < 6; i++) {{
                 ctx.rotate((Math.PI * 2) / 6);
                 ctx.beginPath();
-                ctx.quadraticCurveTo(0, 0, 20, 30);
+                ctx.quadraticCurveTo(0, 0, 15, 25);
                 ctx.stroke();
             }}
             
-            // Poros Tengah
-            ctx.fillStyle = "#2c3e50";
+            ctx.fillStyle = "#34495e";
             ctx.beginPath();
-            ctx.arc(0, 0, 10, 0, Math.PI * 2);
+            ctx.arc(0, 0, 8, 0, Math.PI * 2);
             ctx.fill();
             ctx.restore();
         }}
 
-        function animate() {{
+        function loop() {{
             ctx.clearRect(0, 0, canvas.width, canvas.height);
-            
-            // Update Logika Animasi Jika Status RUN
-            if (isRunning) {{
-                angle += (speed * 0.05);
-            }}
+            if (isRunning) angle += (speed * 0.04);
 
-            // Tampilkan struktur dasar dan motor pompa
-            drawPumpStructure();
+            drawPump();
 
-            // Menggambar Aliran Partikel Air di Inlet
+            // Partikel Air Masuk (Inlet)
             ctx.fillStyle = "#3498db";
             inletParticles.forEach(p => {{
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
                 ctx.fill();
                 if (isRunning) {{
-                    p.x += speed * 0.5 + 0.5;
-                    if (p.x > 250) p.x = 0; // Reset balik ke kiri pipa
+                    p.x += speed * 0.4 + 0.3;
+                    if (p.x > 250) p.x = 0;
                 }}
             }});
 
-            // Menggambar Impeller yang Berputar
-            drawImpellerBlades(angle);
+            drawImpeller(angle);
 
-            // Menggambar Aliran Partikel Air di Outlet
+            // Partikel Air Keluar (Outlet)
             ctx.fillStyle = "#2980b9";
             outletParticles.forEach(p => {{
                 ctx.beginPath();
                 ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
                 ctx.fill();
                 if (isRunning) {{
-                    p.y -= speed * 0.7 + 0.5;
-                    if (p.y < 0) p.y = 150; // Reset balik ke leher pompa
+                    p.y -= speed * 0.5 + 0.3;
+                    if (p.y < 0) p.y = 125;
                 }}
             }});
 
-            // Efek Air Pusaran di dalam Casing Pompa (Transparan)
-            if (isRunning) {{
-                ctx.fillStyle = "rgba(52, 152, 219, 0.4)";
-                ctx.beginPath();
-                ctx.arc(300, 230, 40, angle, angle + 1);
-                ctx.lineWidth = 4;
-                ctx.strokeStyle = "rgba(255,255,255,0.6)";
-                ctx.stroke();
-            }}
-
-            requestAnimationFrame(animate);
+            requestAnimationFrame(loop);
         }}
-
-        animate();
+        loop();
     </script>
     """
-    st.components.v1.html(canvas_html, height=460)
+    st.components.v1.html(canvas_html, height=395)
 
 # =========================
-# COL 2: OUTPUT METRIC
-# =========================
-with col2:
-    st.subheader("⚡ Output")
-    
-    st.metric(label="Daya Pompa Aktual", value=f"{daya:.2f} kW")
-    
-    if daya > 20:
-        st.error("⚠️ Status: Daya terlalu Tinggi! Periksa kembali debit/head.")
-    else:
-        st.success("✅ Status: Daya dalam batas Normal")
-
-    st.write("### 📝 Rincian Parameter:")
-    st.info(f"""
-    *   **Debit Aliran ($Q$):** {debit} $m^3/s$
-    *   **Total Head ($H$):** {head} $m$
-    *   **Efisiensi Alat ($\eta$):** {efisiensi}%
-    *   **Konstanta Fluida:** $\rho = 1000\ kg/m^3$
-    """)
-
-# =========================
-# GRAFIK KURVA KINERJA POMPA
+# GRAFIK DIAGRAM DI BAGIAN BAWAH
 # =========================
 st.markdown("---")
-st.subheader("📊 Grafik Karakteristik Daya vs Debit")
+st.subheader("📊 Kurva Karakteristik Operasional Pompa")
 
-# Generate data kurva parabola yang lebih realistis
-q_range = np.linspace(0.01, 0.25, 100)
-p_range = (rho * g * q_range * head) / eta / 1000
+# Membuat kalkulasi kurva kontinu
+q_curve = np.linspace(0.001, 0.250, 150)
+p_curve = (rho * g * q_curve * head) / eta / 1000
 
-fig, ax = plt.subplots(figsize=(10, 4))
-ax.plot(q_range, p_range, color='#1f4e79', linewidth=2.5, label='Kurva Kebutuhan Daya')
-ax.scatter(debit, daya, color='#e74c3c', s=120, zorder=5, label='Titik Kerja Saat Ini')
+fig, ax = plt.subplots(figsize=(11, 3.5))
+ax.plot(q_curve, p_curve, color='#1f4e79', linewidth=2.5, label='Kurva Karakteristik Daya')
+ax.scatter(debit, daya, color='#e74c3c', s=140, zorder=5, label='Titik Operasional Kerja')
 
-# Garis bantu penunjuk titik (Dotted Lines)
-ax.axhline(daya, color='gray', linestyle='--', linewidth=1)
-ax.axvline(debit, color='gray', linestyle='--', linewidth=1)
+# Garis putus-putus proyeksi titik
+ax.axhline(daya, color='gray', linestyle=':', alpha=0.7)
+ax.axvline(debit, color='gray', linestyle=':', alpha=0.7)
 
-# Estetika Grafik
-ax.set_xlabel("Debit Aliran (m³/s)", fontsize=10)
-ax.set_ylabel("Kebutuhan Daya (kW)", fontsize=10)
-ax.setTitle(f"Kurva Sistem pada Head {head} meter", fontsize=11, fontweight='bold')
-ax.grid(True, linestyle=':', alpha=0.6)
-ax.legend(loc='upper left')
+ax.set_xlabel("Debit Fluida Q (m³/s)", fontsize=9)
+ax.set_ylabel("Daya Mekanis P (kW)", fontsize=9)
+ax.set_title(f"Analisis Dinamis pada Konstanta Head {head} meter", fontsize=10, fontweight='bold', color='#333333')
+ax.grid(True, linestyle='--', alpha=0.4)
+ax.legend(loc='upper left', fontsize=9)
 
 st.pyplot(fig)
