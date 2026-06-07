@@ -329,6 +329,7 @@ with col_display:
             
             st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
             st.write(f"🔹 **Massa Jenis Fluida ($\\rho$):** {rho} $kg/m^3$")
+            st.write(f"🔹 **Percepatan Gravitasi ($g$):** {g} $m/s^2$") # PENAMBAHAN NILAI GRAVITASI DISINI
             st.write(f"🔹 **Laju Volume ($Q$):** {debit:.3f} $m^3/s$")
             st.write(f"🔹 **Tinggi Tekan ($H$):** {head:.1f} $m$")
             st.markdown("---")
@@ -406,4 +407,3 @@ with col_display:
         
         chart_placeholder.pyplot(fig)
         plt.close(fig)
-    
