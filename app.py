@@ -90,7 +90,7 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-st.title("💧 Simulasi Daya Pompa Air Interaktif")
+st.title("💧 HydroPulse Simulator")
 st.write("Visualisasi aliran fluida dengan antarmuka industrial siber")
 
 # =========================
