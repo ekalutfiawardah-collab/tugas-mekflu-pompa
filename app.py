@@ -3,23 +3,23 @@ import numpy as np
 import matplotlib.pyplot as plt
 import time
 
-# =========================
-# CONFIG & THEME (CYBER BLUE)
-# =========================
+# ==========================================
+# CONFIG & THEME (REKOMENDASI: DEEP SPACE BLUE)
+# ==========================================
 st.set_page_config(page_title="Simulasi Pompa Air Pro", layout="wide")
 
-# Custom CSS untuk memperbaiki kontras elemen input, tombol, dan card analisis
+# Custom CSS untuk optimasi kontras tema Deep Space Blue, Input Box, dan Tombol
 st.markdown("""
     <style>
-    /* Mengubah background aplikasi utama */
+    /* Mengubah background aplikasi utama menjadi Deep Space Blue */
     .stApp {
-        background: linear-gradient(135deg, #0a192f 0%, #0f3460 100%);
+        background: linear-gradient(135deg, #060b14 0%, #101f35 100%);
         color: #e2e8f0;
     }
     
     .block-container { padding-top: 1.5rem; }
     
-    /* FIX: Kotak Input Parameter Sistem - Latar Putih, Teks Hitam Tegas */
+    /* FIX: Kotak Input Parameter Sistem - Latar Putih Bersih, Teks Hitam Pekat */
     .stNumberInput div[data-baseweb="input"] { 
         border-radius: 8px; 
         background-color: #ffffff !important; 
@@ -31,26 +31,26 @@ st.markdown("""
         font-size: 1.05rem !important;
     }
     
-    /* Tombol plus minus bawaan di sisi kotak input */
+    /* Tombol plus minus di pinggir kotak input */
     .stNumberInput button {
         background-color: #e2e8f0 !important;
         color: #000000 !important;
     }
     
-    /* FIX: Desain Tombol Jalankan & Stop agar Kontras dan Jelas */
+    /* FIX: Desain Tombol Jalankan & Stop Kontras Tinggi */
     .stButton button {
         background-color: #e2e8f0 !important;
         color: #000000 !important;
         font-weight: bold !important;
         border-radius: 8px !important;
         border: 2px solid #00f2fe !important;
-        box-shadow: 0 4px 10px rgba(0, 242, 254, 0.2);
+        box-shadow: 0 4px 10px rgba(0, 242, 254, 0.15);
         transition: all 0.3s ease;
     }
     .stButton button:hover {
         background-color: #00f2fe !important;
-        color: #0a192f !important;
-        box-shadow: 0 4px 15px rgba(0, 242, 254, 0.6);
+        color: #060b14 !important;
+        box-shadow: 0 4px 15px rgba(0, 242, 254, 0.5);
     }
     
     label[data-testid="stWidgetLabel"] {
@@ -64,13 +64,13 @@ st.markdown("""
         font-weight: 700;
     }
     
-    /* Card Hasil Analisis Mewah Transparan */
+    /* Card Hasil Analisis Mewah Transparan Menyatu dengan Latar Baru */
     .analysis-card {
-        background: rgba(22, 33, 62, 0.7);
+        background: rgba(16, 31, 53, 0.6);
         padding: 20px;
         border-radius: 12px;
-        border: 1px solid rgba(0, 242, 254, 0.3);
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        border: 1px solid rgba(0, 242, 254, 0.25);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
         backdrop-filter: blur(4px);
         margin-bottom: 15px;
     }
@@ -80,12 +80,12 @@ st.markdown("""
         margin-bottom: 6px;
     }
     
-    /* Modifikasi teks Metrik agar menyala */
+    /* Modifikasi teks Metrik agar menyala efek Neon Glow */
     div[data-testid="stMetricValue"] { 
         font-size: 2.2rem; 
         font-weight: 700; 
         color: #00f2fe !important;
-        text-shadow: 0 0 10px rgba(0, 242, 254, 0.5);
+        text-shadow: 0 0 10px rgba(0, 242, 254, 0.6);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -105,7 +105,7 @@ if "run" not in st.session_state:
 col_control, col_display = st.columns([1.2, 1.8])
 
 # =========================
-# KOLOM KIRI: INPUT & ANALISIS PLACEHOLDER
+# KOLOM KIRI: INPUT & ANALISIS CONTAINER
 # =========================
 with col_control:
     st.subheader("⚙️ Parameter Sistem")
@@ -126,7 +126,7 @@ with col_control:
     st.markdown("---")
     st.subheader("⚡ Hasil Analisis")
     
-    # Nilai konstanta fisik
+    # Dasar Teori Hidrolika Fluida
     rho = 1000  
     g = 9.81    
     eta = efisiensi / 100
@@ -134,7 +134,7 @@ with col_control:
     daya_hidrolis_maks = (rho * g * debit * head) / 1000  
     daya_aktual_maks = daya_hidrolis_maks / eta  
     
-    # Elemen kontainer dinamis kosong untuk diisi oleh pergerakan angka berjalan
+    # Wadah kosong dinamis untuk animasi angka merayap naik
     metric_placeholder = st.empty()
 
 # =========================
@@ -156,13 +156,13 @@ with col_display:
     status_text = "● AKTIF (PUMPING)" if st.session_state.run else "● SIAGA"
     status_color = "#2ecc71" if st.session_state.run else "#e74c3c"
 
-    # HTML Modul Canvas Pompa Aman (Tanpa f-string langsung pada JS brackets)
+    # HTML Canvas Modul Aman Bebas Eror f-string Streamlit Cloud
     canvas_html = """
     <div style="background: #111a2e; padding: 10px; border-radius: 12px; border: 2px solid #00f2fe; text-align: center; box-shadow: 0 0 15px rgba(0,242,254,0.3);">
         <div style="text-align: left; margin-bottom: 8px; font-weight: bold; font-family: sans-serif; font-size: 14px; color: #00f2fe;">
             Kondisi Mesin: <span id="statusLabel" style="text-shadow: 0 0 8px;"></span>
         </div>
-        <canvas id="pumpCanvas" width="650" height="300" style="background:#070d19; border-radius: 8px;"></canvas>
+        <canvas id="pumpCanvas" width="650" height="300" style="background:#050d1a; border-radius: 8px;"></canvas>
     </div>
 
     <script>
@@ -302,19 +302,20 @@ with col_display:
     st.components.v1.html(canvas_html, height=340)
 
     # ==========================================
-    # LOGIKA GERAKAN GRAFIK & ANGKA BERJALAN
+    # LOGIKA GERAKAN GRAFIK & LIVE COUNTER
     # ==========================================
     st.markdown("---")
     st.subheader("📊 Kurva Karakteristik Operasional Pompa (Live)")
     
     chart_placeholder = st.empty()
 
+    # Domain kurva karakteristik
     q_curve = np.linspace(0.001, max(0.250, debit * 1.5), 100)
     p_curve = (rho * g * q_curve * head) / eta / 1000
 
     plt.style.use('dark_background')
 
-    # Fungsi untuk merender komponen analisis di kolom kiri secara berulang (efek animasi berjalan)
+    # Fungsi penulisan hasil analisis dinamis di kolom kiri
     def render_analysis_card(curr_aktual, curr_hidrolis):
         with metric_placeholder.container():
             st.markdown('<div class="analysis-card">', unsafe_allow_html=True)
@@ -335,7 +336,7 @@ with col_display:
             st.latex(r"P_{aktual} = \frac{\rho \cdot g \cdot Q \cdot H}{\eta \cdot 1000}")
             st.markdown('</div>', unsafe_allow_html=True)
             
-            # Keterangan Analisis Singkat Otomatis di Bagian Bawah Card
+            # Keterangan Analisis Singkat Otomatis berbasis Nilai Beban Kerja Aktual
             if curr_aktual > 30:
                 st.error("🚨 **ANALISIS STATUS: CRITICAL OVERLOAD**\nKombinasi debit dan head terlalu ekstrem bagi efisiensi sistem. Risiko motor terbakar sangat tinggi.")
             elif curr_aktual > 15:
@@ -343,24 +344,24 @@ with col_display:
             else:
                 st.success("✅ **ANALISIS STATUS: NORMAL OPERATION**\nKonsumsi daya berada di batas aman regulasi standar pabrik industri.")
 
-    # JIKA SIMULASI SEDANG BERJALAN
+    # JIKA STATUSNYA RUNNING (TOMBOL JALANKAN DIAKTIFKAN)
     if st.session_state.run:
         for step in range(1, 31):
             if not st.session_state.run:
                 break
                 
-            # Menghitung nilai berjalan interpolatif (0 menuju batas atas input)
+            # Interpolasi linear dari 0 menuju target input asli untuk efek counter berjalan
             current_q = (debit / 30) * step
             current_hidrolis = (rho * g * current_q * head) / 1000
             current_aktual = current_hidrolis / eta
 
-            # 1. Update Angka Daya yang Berjalan di Kiri
+            # 1. Update Angka Daya Berjalan di Kolom Kiri
             render_analysis_card(current_aktual, current_hidrolis)
 
-            # 2. Update Grafik Lintasan Pertumbuhan di Kanan
+            # 2. Update Grafik Lintasan Pertumbuhan di Kolom Kanan
             fig, ax = plt.subplots(figsize=(11, 3.5))
-            fig.patch.set_facecolor('#0a192f')
-            ax.set_facecolor('#070d19')
+            fig.patch.set_facecolor('#060b14') # Menyamakan warna background grafik ke Deep Space Blue
+            ax.set_facecolor('#050d1a')
 
             ax.plot(q_curve, p_curve, color='#00f2fe', linewidth=2, alpha=0.3, label='Kurva Karakteristik')
             
@@ -382,15 +383,15 @@ with col_display:
             plt.close(fig)
             time.sleep(0.04)
 
-    # JIKA KONDISI DIAM / STOP
+    # JIKA STATUSNYA DIAM ATAU DI-STOP
     if not st.session_state.run:
-        # Kunci card analisis di angka maksimal target input
+        # Mengunci tampilan angka pada kapasitas puncak parameter input
         render_analysis_card(daya_aktual_maks, daya_hidrolis_maks)
         
-        # Kunci grafik stasioner tunggal beserta legenda penjelas
+        # Mengunci tampilan grafik pada titik kerja stasioner tunggal
         fig, ax = plt.subplots(figsize=(11, 3.5))
-        fig.patch.set_facecolor('#0a192f')
-        ax.set_facecolor('#070d19')
+        fig.patch.set_facecolor('#060b14') # Menyamakan warna background grafik ke Deep Space Blue
+        ax.set_facecolor('#050d1a')
 
         ax.plot(q_curve, p_curve, color='#00f2fe', linewidth=2.5, label='Kurva Karakteristik Daya')
         ax.scatter(debit, daya_aktual_maks, color='#ff007f', s=140, zorder=5, label='Titik Operasional Kerja')
@@ -405,3 +406,4 @@ with col_display:
         
         chart_placeholder.pyplot(fig)
         plt.close(fig)
+    
