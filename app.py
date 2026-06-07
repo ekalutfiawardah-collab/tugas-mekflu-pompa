@@ -8,7 +8,7 @@ import time
 # =========================
 st.set_page_config(page_title="Simulasi Pompa Air Pro", layout="wide")
 
-# Custom CSS untuk memperbaiki kontras warna input box dan mempercantik UI
+# Custom CSS untuk memperbaiki kontras warna input box dan tema gelap industri
 st.markdown("""
     <style>
     /* Mengubah background aplikasi utama */
@@ -19,7 +19,7 @@ st.markdown("""
     
     .block-container { padding-top: 1.5rem; }
     
-    /* FIX: Input Box bergaya Tech dengan Teks Hitam Pekat agar Jelas Terbaca */
+    /* FIX: Input Box dengan Teks Hitam Pekat agar Jelas Terbaca */
     .stNumberInput div[data-baseweb="input"] { 
         border-radius: 8px; 
         background-color: #ffffff !important; /* Latar belakang putih bersih */
@@ -138,7 +138,7 @@ with col_display:
     is_running = "true" if st.session_state.run else "false"
     base_speed = np.clip(debit * 100, 1, 25)
 
-    # HTML5 Canvas Animasi Pompa Realistis
+    # HTML5 Canvas Animasi Pompa Realistis dengan Karakter Partikel Glow
     canvas_html = f"""
     <div style="background: #111a2e; padding: 10px; border-radius: 12px; border: 2px solid #00f2fe; text-align: center; box-shadow: 0 0 15px rgba(0,242,254,0.3);">
         <div style="text-align: left; margin-bottom: 8px; font-weight: bold; font-family: sans-serif; font-size: 14px; color: #00f2fe;">
@@ -157,6 +157,7 @@ with col_display:
         let angle = 0;
         let particles = [];
         
+        // Inisialisasi partikel air mengalir kontinu
         for(let i=0; i<45; i++) {{
             particles.push({{
                 stage: Math.random() > 0.5 ? 'inlet' : 'outlet',
@@ -166,6 +167,7 @@ with col_display:
                 alpha: Math.random() * 0.5 + 0.5
             }});
         }}
+        
         particles.forEach(p => {{
             if(p.stage === 'outlet') {{
                 p.x = 295 + (Math.random() * 24 + 3);
@@ -174,6 +176,7 @@ with col_display:
         }});
 
         function drawRealisticPump() {{
+            // 1. Pipa Transparan dengan Gradasi Cairan Neon
             let pipeGlow = ctx.createLinearGradient(0, 135, 0, 165);
             pipeGlow.addColorStop(0, "rgba(0, 242, 254, 0.1)");
             pipeGlow.addColorStop(0.5, "rgba(0, 242, 254, 0.3)");
@@ -189,6 +192,7 @@ with col_display:
             ctx.moveTo(295, 0); ctx.lineTo(295, 90); ctx.moveTo(325, 0); ctx.lineTo(325, 70);
             ctx.stroke();
 
+            // 2. Blok Motor Penggerak (Efek 3D Sirip)
             let motorGrad = ctx.createLinearGradient(360, 110, 460, 110);
             motorGrad.addColorStop(0, "#1f2d3d");
             motorGrad.addColorStop(0.5, "#3a506b");
@@ -202,6 +206,7 @@ with col_display:
                 ctx.fillRect(368 + (m*13), 190, 6, 8);
             }}
 
+            // 3. Rumah Siput Pompa (Volute Casing Logam)
             let voluteGrad = ctx.createRadialGradient(310, 150, 10, 310, 150, 60);
             voluteGrad.addColorStop(0, "#1f4068");
             voluteGrad.addColorStop(0.8, "#162447");
@@ -247,7 +252,7 @@ with col_display:
 
             particles.forEach(p => {{
                 ctx.save();
-                ctx.fillStyle = `rgba(0, 242, 254, ${{p.alpha}})`;
+                ctx.fillStyle = "rgba(0, 242, 254, " + p.alpha + ")";
                 ctx.shadowBlur = 6;
                 ctx.shadowColor = "#00f2fe";
                 ctx.beginPath(); 
@@ -291,4 +296,81 @@ with col_display:
 
     plt.style.use('dark_background')
 
-    # FUNGSI UNTUK MERENDER K
+    # Fungsi internal untuk memperbarui visual card di sebelah kiri secara paralel
+    def render_analysis_card(curr_aktual, curr_hidrolis):
+        with metric_placeholder.container():
+            st.markdown('<div class="analysis-card">', unsafe_allow_html=True)
+            st.metric(
+                label="🔋 Kebutuhan Daya Aktual (P_input)", 
+                value=f"{curr_aktual:.2f} kW",
+                delta=f"Daya Air: {curr_hidrolis:.2f} kW"
+            )
+            st.markdown(f'<div class="parameter-text">⚡ <b>Efisiensi Mekanis:</b> {efisiensi}%</div>', unsafe_allow_html=True)
+            st.progress(efisiensi / 100)
+            
+            st.markdown("<div style='margin-top: 15px;'></div>", unsafe_allow_html=True)
+            st.write(f"🔹 **Massa Jenis Fluida ($\\rho$):** {rho} $kg/m^3$")
+            st.write(f"🔹 **Laju Volume ($Q$):** {debit:.3f} $m^3/s$")
+            st.write(f"🔹 **Tinggi Tekan ($H$):** {head:.1f} $m$")
+            st.markdown("---")
+            st.markdown("**Formulasi Dasar:**")
+            st.latex(r"P_{aktual} = \frac{\rho \cdot g \cdot Q \cdot H}{\eta \cdot 1000}")
+            st.markdown('</div>', unsafe_allow_html=True)
+            
+            if curr_aktual > 30:
+                st.error("🚨 **STATUS: CRITICAL OVERLOAD**\nDaya terlalu ekstrem (> 30 kW).")
+            elif curr_aktual > 15:
+                st.warning("⚠️ **STATUS: HEAVY DUTY**\nOperasi membutuhkan daya menengah atas.")
+            else:
+                st.success("✅ **STATUS: NORMAL OPERATION**\nSistem bekerja pada rentang aman.")
+
+    # JIKA TOMBOL RUN SEANG AKTIF
+    if st.session_state.run:
+        for step in range(1, 31):
+            if not st.session_state.run:
+                break
+                
+            # Interpolasi pertumbuhan data (efek animasi counter)
+            current_q = (debit / 30) * step
+            current_hidrolis = (rho * g * current_q * head) / 1000
+            current_aktual = current_hidrolis / eta
+
+            # 1. Jalankan Angka Berjalan di Kiri
+            render_analysis_card(current_aktual, current_hidrolis)
+
+            # 2. Jalankan Grafik Berjalan di Kanan
+            fig, ax = plt.subplots(figsize=(11, 3.5))
+            fig.patch.set_facecolor('#0a192f')
+            ax.set_facecolor('#070d19')
+
+            ax.plot(q_curve, p_curve, color='#00f2fe', linewidth=2, alpha=0.3, label='Kurva Karakteristik')
+            
+            q_track = np.linspace(0.001, current_q, step)
+            p_track = (rho * g * q_track * head) / eta / 1000
+            ax.plot(q_track, p_track, color='#ffb703', linewidth=3, label='Pertumbuhan Daya')
+            
+            ax.scatter(current_q, current_aktual, color='#ff007f', s=130, zorder=5)
+            ax.axhline(current_aktual, color='cyan', linestyle=':', alpha=0.3)
+            ax.axvline(current_q, color='cyan', linestyle=':', alpha=0.3)
+
+            ax.set_xlabel("Debit Fluida Q (m³/s)", fontsize=9, color='#81e6d9')
+            ax.set_ylabel("Daya Mekanis P (kW)", fontsize=9, color='#81e6d9')
+            ax.set_xlim(0, max(0.250, debit * 1.3))
+            ax.set_ylim(0, max(p_curve) * 1.1)
+            ax.grid(True, linestyle='--', alpha=0.1)
+            
+            chart_placeholder.pyplot(fig)
+            plt.close(fig)
+            time.sleep(0.04)
+
+    # JIKA TOMBOL STOP ATAU KONDISI DIAM AWAL
+    if not st.session_state.run:
+        # Mengunci metrik pada target angka akhir asli
+        render_analysis_card(daya_aktual_maks, daya_hidrolis_maks)
+        
+        # Mengunci posisi grafik pada titik operasi stasioner
+        fig, ax = plt.subplots(figsize=(11, 3.5))
+        fig.patch.set_facecolor('#0a192f')
+        ax.set_facecolor('#070d19')
+
+        ax.plot(q_curve, p_curve, color='#00f2fe', linewidth
